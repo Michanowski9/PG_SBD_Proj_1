@@ -109,7 +109,7 @@ class Sorter:
                     out_tape.WriteNextRecord(record_tape[2])
                     last_record[2] = record_tape[2]
                     record_tape[2] = tapes[2].GetNextRecord()
-                elif last_record[1] is None:
+                elif last_record[1] is None and IsAGreaterThanB(record_tape[2], record_tape[1]):
                     out_tape.WriteNextRecord(record_tape[1])
                     last_record[1] = record_tape[1]
                     record_tape[1] = tapes[1].GetNextRecord()
@@ -117,10 +117,20 @@ class Sorter:
                     out_tape.WriteNextRecord(record_tape[2])
                     last_record[2] = record_tape[2]
                     record_tape[2] = tapes[2].GetNextRecord()
-                elif not IsAGreaterThanB(last_record[1],record_tape[1]):
+                elif not IsAGreaterThanB(last_record[1],record_tape[1]) and not IsAGreaterThanB(record_tape[1], record_tape[2]):
                     out_tape.WriteNextRecord(record_tape[1])
                     last_record[1] = record_tape[1]
                     record_tape[1] = tapes[1].GetNextRecord()
+                elif IsAGreaterThanB(last_record[2],record_tape[2]) and not IsAGreaterThanB(last_record[1],record_tape[1]):
+                    is_file_sorted = False
+                    out_tape.WriteNextRecord(record_tape[1])
+                    last_record[1] = record_tape[1]
+                    record_tape[1] = tapes[1].GetNextRecord()
+                elif IsAGreaterThanB(last_record[1],record_tape[1]) and not IsAGreaterThanB(last_record[2],record_tape[2]):
+                    is_file_sorted = False
+                    out_tape.WriteNextRecord(record_tape[2])
+                    last_record[2] = record_tape[2]
+                    record_tape[2] = tapes[2].GetNextRecord()
                 elif IsAGreaterThanB(last_record[2],record_tape[2]) and IsAGreaterThanB(last_record[1],record_tape[1]):
                     last_record = {1:None, 2:None}
 
@@ -139,15 +149,17 @@ class Sorter:
 
         is_file_sorted = self.LoadFileToTapes(filename)
 
-        self.PrintTapesIfDebug()
-
+        phase = 0
         while True:
+            if self.debug:
+                phase +=1
+                print("  " + str(phase) + ". phase:")
+            self.PrintTapesIfDebug()
             is_file_sorted = self.MergeTwoTapesIntoOneTape()
             self.PrintTapeIfDebug()
             if is_file_sorted:
                 break
             self.LoadFileToTapes()
-            self.PrintTapesIfDebug()
 
         print("\n")
         print("Output:")

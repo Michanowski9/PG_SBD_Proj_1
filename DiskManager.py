@@ -54,6 +54,7 @@ class TapeManager:
             self.out_block.clear()
 
     def ForceWrite(self):
-        self.disk_manager.WriteBlock(self.filename, self.out_block)
-        self.out_block.clear()
+        if self.out_block != []:
+            self.disk_manager.WriteBlock(self.filename, self.out_block)
+            self.out_block.clear()
 

@@ -1,6 +1,7 @@
 
 
 class Record:
+    representation = 0
     maxSize = 30
     def __init__(self, data) -> None:
         if len(data) > self.maxSize:
@@ -9,9 +10,13 @@ class Record:
         self.data = data
 
     def __repr__(self) -> str:
-        #return "\"" + self.data + "\""
-        return str(GetRepeatingLettersNumber(self.data))
-        return "\"" + self.data + "\"" + str(GetRepeatingLettersNumber(self.data))
+        match self.representation:
+            case 0:
+                return  "\"" + self.data.replace("_","") + "\"(" + str(GetRepeatingLettersNumber(self.data))+ ")"
+            case 1:
+                return "\"" + self.data.replace("_","") + "\""
+            case 2:
+                return str(GetRepeatingLettersNumber(self.data))
 
 
 def IsAGreaterThanB(a, b):
