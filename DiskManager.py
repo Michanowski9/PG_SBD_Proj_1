@@ -6,7 +6,6 @@ class DiskManager:
     def __init__(self) -> None:
         self.reads = 0
         self.writes = 0
-        pass
 
     def ReadBlock(self, filename, position=0):
         self.reads += 1
@@ -31,16 +30,17 @@ class TapeManager:
         self.position = 0
         self.block = []
         self.out_block = []
+        self.no_data = False
 
     def GetNextRecord(self):
-        if self.block == []:
-            print("read block " + self.filename +" " + str(self.position))
+        if self.block == [] and not self.no_data:
             self.block = self.disk_manager.ReadBlock(self.filename, self.position)
-            print(self.block)
             self.position += DiskManager.blockSize * Record.maxSize
 
+            if len(self.block) < DiskManager.blockSize:
+                self.no_data = True
+
         if self.block == []:
-            print("none")
             return None
 
         result = self.block[0]
@@ -50,12 +50,10 @@ class TapeManager:
     def WriteNextRecord(self, record):
         self.out_block.append(record)
         if len(self.out_block) == DiskManager.blockSize:
-            #print("write block")
             self.disk_manager.WriteBlock(self.filename, self.out_block)
             self.out_block.clear()
 
     def ForceWrite(self):
-        #print("write block")
         self.disk_manager.WriteBlock(self.filename, self.out_block)
         self.out_block.clear()
 

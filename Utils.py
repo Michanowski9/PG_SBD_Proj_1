@@ -84,58 +84,48 @@ class Sorter:
             pass
 
         tapes = { 1:TapeManager(self.disk_manager, "tape_1"), 2:TapeManager(self.disk_manager, "tape_2")}
-        out_tape = TapeManager(self.disk_manager, "tape_1")
+        out_tape = TapeManager(self.disk_manager, "tape_3")
 
-        record_tape = {1:None, 2:None}
-        record_tape[1] = tapes[1].GetNextRecord()
-        record_tape[2] = tapes[2].GetNextRecord()
+        record_tape = {1:tapes[1].GetNextRecord(), 2:tapes[2].GetNextRecord()}
 
         last_record = { 1:None, 2:None }
 
-        counter = 0
-
+        is_file_sorted = True
         while True:
-#            print(last_record)
-            #print(record_tape)
-            if record_tape[1] is None:
-#                print(record_tape[1])
-                out_tape.WriteNextRecord(record_tape[2])
-                record_tape[2] = tapes[2].GetNextRecord()
-            elif record_tape[2] is None:
-#                print(record_tape[2])
-                out_tape.WriteNextRecord(record_tape[1])
-                record_tape[1] = tapes[1].GetNextRecord()
+            if IsAGreaterThanB(last_record[1], record_tape[1]) or IsAGreaterThanB(last_record[1], record_tape[1]):
+                is_file_sorted = False
 
             if record_tape[1] is None and record_tape[2] is None:
                 break
 
-            if last_record[2] is None and IsAGreaterThanB(record_tape[1], record_tape[2]):
-#                print(record_tape[2])
+            if record_tape[1] is None:
                 out_tape.WriteNextRecord(record_tape[2])
-                last_record[2] = record_tape[2]
                 record_tape[2] = tapes[2].GetNextRecord()
-            elif last_record[1] is None:
- #               print(record_tape[1])
+            elif record_tape[2] is None:
                 out_tape.WriteNextRecord(record_tape[1])
-                last_record[1] = record_tape[1]
                 record_tape[1] = tapes[1].GetNextRecord()
-            elif not IsAGreaterThanB(last_record[2],record_tape[2]) and IsAGreaterThanB(record_tape[1], record_tape[2]):
-  #              print(record_tape[2])
-                out_tape.WriteNextRecord(record_tape[2])
-                last_record[2] = record_tape[2]
-                record_tape[2] = tapes[2].GetNextRecord()
-            elif not IsAGreaterThanB(last_record[1],record_tape[1]):
-   #             print(record_tape[1])
-                out_tape.WriteNextRecord(record_tape[1])
-                last_record[1] = record_tape[1]
-                record_tape[1] = tapes[1].GetNextRecord()
-            elif IsAGreaterThanB(last_record[2],record_tape[2]) and IsAGreaterThanB(last_record[1],record_tape[1]):
-                last_record = {1:None, 2:None}
+            else:
+                if last_record[2] is None and IsAGreaterThanB(record_tape[1], record_tape[2]):
+                    out_tape.WriteNextRecord(record_tape[2])
+                    last_record[2] = record_tape[2]
+                    record_tape[2] = tapes[2].GetNextRecord()
+                elif last_record[1] is None:
+                    out_tape.WriteNextRecord(record_tape[1])
+                    last_record[1] = record_tape[1]
+                    record_tape[1] = tapes[1].GetNextRecord()
+                elif not IsAGreaterThanB(last_record[2],record_tape[2]) and IsAGreaterThanB(record_tape[1], record_tape[2]):
+                    out_tape.WriteNextRecord(record_tape[2])
+                    last_record[2] = record_tape[2]
+                    record_tape[2] = tapes[2].GetNextRecord()
+                elif not IsAGreaterThanB(last_record[1],record_tape[1]):
+                    out_tape.WriteNextRecord(record_tape[1])
+                    last_record[1] = record_tape[1]
+                    record_tape[1] = tapes[1].GetNextRecord()
+                elif IsAGreaterThanB(last_record[2],record_tape[2]) and IsAGreaterThanB(last_record[1],record_tape[1]):
+                    last_record = {1:None, 2:None}
 
-            counter += 1
-            if counter == 25:
-                break
-        return True
+        out_tape.ForceWrite()
+
         return is_file_sorted
 
 
@@ -153,13 +143,12 @@ class Sorter:
 
         while True:
             is_file_sorted = self.MergeTwoTapesIntoOneTape()
-            #self.PrintTapeIfDebug()
+            self.PrintTapeIfDebug()
             if is_file_sorted:
                 break
             self.LoadFileToTapes()
             self.PrintTapesIfDebug()
 
-        return
         print("\n")
         print("Output:")
         PrintFile("tape_3")

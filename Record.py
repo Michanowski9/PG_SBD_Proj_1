@@ -10,6 +10,7 @@ class Record:
 
     def __repr__(self) -> str:
         #return "\"" + self.data + "\""
+        return str(GetRepeatingLettersNumber(self.data))
         return "\"" + self.data + "\"" + str(GetRepeatingLettersNumber(self.data))
 
 
