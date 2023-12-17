@@ -4,7 +4,7 @@ from colorama import Fore, Style
 import os
 
 from Record import IsAGreaterThanB, Record, GetRepeatingLettersNumber
-from DiskManager import DiskManager
+from DiskManager import DiskManager, TapeManager
 
 def GenerateExampleFile(filename, records_no, padding_char="_"):
     with open(filename, 'wb') as result_file:
@@ -46,9 +46,6 @@ class Sorter:
 
     def LoadFileToTapes(self,filename="tape_3"):
         self.splits += 1
-        tapes = []
-        tapes.append([])
-        tapes.append([])
 
         try:
             os.remove("tape_1")
@@ -58,36 +55,26 @@ class Sorter:
 
         last_record = None
 
-        position = 0
-        current_tape = 0
-        block = self.disk_manager.ReadBlock(filename, position)
-        while block:
-            for record in block:
-                if last_record is None:
-                    tapes[current_tape].append(record)
+        current_tape = 1
+        input_tape = TapeManager(self.disk_manager, filename)
 
-                else:
-                    if not IsAGreaterThanB(last_record, record):
-                        tapes[current_tape].append(record)
-                    else:
-                        current_tape = 0 if current_tape == 1 else 1
-                        tapes[current_tape].append(record)
+        out_tape = { 1:TapeManager(self.disk_manager, "tape_1"), 2:TapeManager(self.disk_manager, "tape_2")}
+
+        record = input_tape.GetNextRecord()
+        last_record = None
+        while record:
+            if last_record is None:
                 last_record = record
+            elif IsAGreaterThanB(last_record, record):
+                current_tape = 1 if current_tape == 2 else 2
 
-                for i, tape in enumerate(tapes, start=1):
-                    if len(tape) > DiskManager.blockSize:
-                        self.disk_manager.WriteBlock("tape_" + str(i), tape)
-                        tape.clear()
+            out_tape[current_tape].WriteNextRecord(record)
+            last_record = record
+            record = input_tape.GetNextRecord()
 
+        for _, tape in out_tape.items():
+            tape.ForceWrite()
 
-            if len(block) < DiskManager.blockSize:
-                break
-            position += len(block) * Record.maxSize
-            block = self.disk_manager.ReadBlock(filename, position)
-
-        for i, tape in enumerate(tapes, start=1):
-            self.disk_manager.WriteBlock("tape_" + str(i), tape)
-            tape.clear()
 
     def MergeTwoTapesIntoOneTape(self):
         self.merges += 1
@@ -96,56 +83,59 @@ class Sorter:
         except OSError:
             pass
 
-        tapes = { 1:self.disk_manager.ReadBlock("tape_1"), 2:self.disk_manager.ReadBlock("tape_2") }
-        tapes_last_record = { 1:None, 2:None }
-        tapes_position = { 1:0, 2:0}
-        tapes_empty = {1:False, 2:False}
+        tapes = { 1:TapeManager(self.disk_manager, "tape_1"), 2:TapeManager(self.disk_manager, "tape_2")}
+        out_tape = TapeManager(self.disk_manager, "tape_1")
 
-        out_block = []
-        is_file_sorted = True
+        record_tape = {1:None, 2:None}
+        record_tape[1] = tapes[1].GetNextRecord()
+        record_tape[2] = tapes[2].GetNextRecord()
+
+        last_record = { 1:None, 2:None }
+
+        counter = 0
+
         while True:
+#            print(last_record)
+            #print(record_tape)
+            if record_tape[1] is None:
+#                print(record_tape[1])
+                out_tape.WriteNextRecord(record_tape[2])
+                record_tape[2] = tapes[2].GetNextRecord()
+            elif record_tape[2] is None:
+#                print(record_tape[2])
+                out_tape.WriteNextRecord(record_tape[1])
+                record_tape[1] = tapes[1].GetNextRecord()
 
-            if tapes_empty[1] and tapes[1] == []:
-                out_block.append(tapes[2][0])
-                tapes[2].pop(0)
-            elif tapes_empty[2] and tapes[2] == []:
-                out_block.append(tapes[1][0])
-                tapes[1].pop(0)
-
-            else:
-                if IsAGreaterThanB(tapes_last_record[1],tapes[1][0]) and IsAGreaterThanB(tapes_last_record[2],tapes[2][0]):
-                    is_file_sorted = False
-                    tapes_last_record = { 1:None, 2:None }
-
-                if IsAGreaterThanB(tapes_last_record[1],tapes[1][0]):
-                    out_block.append(tapes[2][0])
-                    tapes_last_record[2] = tapes[2][0]
-                    tapes[2].pop(0)
-
-                elif IsAGreaterThanB(tapes_last_record[2],tapes[2][0]) or IsAGreaterThanB(tapes[2][0], tapes[1][0]):
-                    out_block.append(tapes[1][0])
-                    tapes_last_record[1] = tapes[1][0]
-                    tapes[1].pop(0)
-
-                else:
-                    out_block.append(tapes[2][0])
-                    tapes_last_record[2] = tapes[2][0]
-                    tapes[2].pop(0)
-
-            if len(out_block) >= DiskManager.blockSize:
-                self.disk_manager.WriteBlock("tape_3", out_block)
-                out_block.clear()
-
-            for tape_id, _ in enumerate(tapes, start=1):
-                if not tapes_empty[tape_id] and len(tapes[tape_id]) == 0:
-                    tapes_position[tape_id] += DiskManager.blockSize * Record.maxSize
-                    tapes[tape_id] = self.disk_manager.ReadBlock("tape_" + str(tape_id), tapes_position[tape_id])
-                    if len(tapes[tape_id]) < DiskManager.blockSize:
-                        tapes_empty[tape_id] = True
-            if tapes_empty[1] and tapes[1] == [] and tapes_empty[2] and tapes[2] == []:
-                if len(out_block) > 0:
-                    self.disk_manager.WriteBlock("tape_3", out_block)
+            if record_tape[1] is None and record_tape[2] is None:
                 break
+
+            if last_record[2] is None and IsAGreaterThanB(record_tape[1], record_tape[2]):
+#                print(record_tape[2])
+                out_tape.WriteNextRecord(record_tape[2])
+                last_record[2] = record_tape[2]
+                record_tape[2] = tapes[2].GetNextRecord()
+            elif last_record[1] is None:
+ #               print(record_tape[1])
+                out_tape.WriteNextRecord(record_tape[1])
+                last_record[1] = record_tape[1]
+                record_tape[1] = tapes[1].GetNextRecord()
+            elif not IsAGreaterThanB(last_record[2],record_tape[2]) and IsAGreaterThanB(record_tape[1], record_tape[2]):
+  #              print(record_tape[2])
+                out_tape.WriteNextRecord(record_tape[2])
+                last_record[2] = record_tape[2]
+                record_tape[2] = tapes[2].GetNextRecord()
+            elif not IsAGreaterThanB(last_record[1],record_tape[1]):
+   #             print(record_tape[1])
+                out_tape.WriteNextRecord(record_tape[1])
+                last_record[1] = record_tape[1]
+                record_tape[1] = tapes[1].GetNextRecord()
+            elif IsAGreaterThanB(last_record[2],record_tape[2]) and IsAGreaterThanB(last_record[1],record_tape[1]):
+                last_record = {1:None, 2:None}
+
+            counter += 1
+            if counter == 25:
+                break
+        return True
         return is_file_sorted
 
 
@@ -158,17 +148,18 @@ class Sorter:
         is_file_sorted = False
 
         is_file_sorted = self.LoadFileToTapes(filename)
+
         self.PrintTapesIfDebug()
 
         while True:
             is_file_sorted = self.MergeTwoTapesIntoOneTape()
-            self.PrintTapeIfDebug()
+            #self.PrintTapeIfDebug()
             if is_file_sorted:
                 break
-
             self.LoadFileToTapes()
             self.PrintTapesIfDebug()
 
+        return
         print("\n")
         print("Output:")
         PrintFile("tape_3")

@@ -23,3 +23,39 @@ class DiskManager:
         data = ''.join([record.data for record in block])
         with open(filename, 'ab') as output_file:
             output_file.write(data.encode("utf-8"))
+
+class TapeManager:
+    def __init__(self, disk_manager, filename) -> None:
+        self.disk_manager = disk_manager
+        self.filename = filename
+        self.position = 0
+        self.block = []
+        self.out_block = []
+
+    def GetNextRecord(self):
+        if self.block == []:
+            print("read block " + self.filename +" " + str(self.position))
+            self.block = self.disk_manager.ReadBlock(self.filename, self.position)
+            print(self.block)
+            self.position += DiskManager.blockSize * Record.maxSize
+
+        if self.block == []:
+            print("none")
+            return None
+
+        result = self.block[0]
+        self.block.pop(0)
+        return result
+
+    def WriteNextRecord(self, record):
+        self.out_block.append(record)
+        if len(self.out_block) == DiskManager.blockSize:
+            #print("write block")
+            self.disk_manager.WriteBlock(self.filename, self.out_block)
+            self.out_block.clear()
+
+    def ForceWrite(self):
+        #print("write block")
+        self.disk_manager.WriteBlock(self.filename, self.out_block)
+        self.out_block.clear()
+
